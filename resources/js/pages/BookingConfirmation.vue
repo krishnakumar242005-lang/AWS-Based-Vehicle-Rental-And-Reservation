@@ -1,8 +1,10 @@
+
 <script setup lang="ts">
 import HomeLayout from '@/layouts/HomeLayout.vue';
 import { usePage } from '@inertiajs/vue3';
 import { fleet } from '@/routes';
 import { index } from '@/routes/client/reservations';
+import { computed } from 'vue';
 
 interface Reservation {
     id: number;
@@ -35,260 +37,317 @@ interface PageProps {
     reservation: Reservation;
 }
 
-const $page = usePage<PageProps>();
-const reservation = $page.props.reservation;
+const page = usePage<PageProps>();
+const reservation = computed(() => page.props.reservation);
+
+const formatDate = (date: string) => {
+    const parsed = new Date(`${date.slice(0, 10)}T00:00:00`);
+
+    if (Number.isNaN(parsed.getTime())) return date;
+
+    return new Intl.DateTimeFormat('en-IN', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+    }).format(parsed);
+};
+
+const formatPrice = (amount: string | number) =>
+    new Intl.NumberFormat('en-IN', {
+        style: 'currency',
+        currency: 'INR',
+        maximumFractionDigits: 2,
+    }).format(Number(amount) || 0);
+
+const statusClass = computed(() => {
+    const status = reservation.value.status.toLowerCase();
+
+    if (status === 'confirmed' || status === 'approved') {
+        return 'bg-emerald-100 text-emerald-800';
+    }
+
+    if (status === 'cancelled' || status === 'rejected') {
+        return 'bg-red-100 text-red-800';
+    }
+
+    return 'bg-amber-100 text-amber-800';
+});
 </script>
 
 <template>
     <HomeLayout>
-        <div class="min-h-screen bg-white py-12">
-            <div class="mx-auto max-w-7xl px-6">
-                <!-- Clean success header with minimal styling -->
-                <div class="mb-12 text-center">
-                    <div
-                        class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100"
-                    >
-                        <svg
-                            class="h-8 w-8 text-green-600"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M5 13l4 4L19 7"
-                            ></path>
+        <div class="min-h-screen bg-[#F4F6FA] pb-16">
+            <!-- Confirmation banner -->
+            <section class="relative overflow-hidden bg-[#101D35] px-4 py-12 text-white sm:py-16">
+                <div class="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full border border-white/10"></div>
+                <div class="pointer-events-none absolute -right-10 -top-14 h-52 w-52 rounded-full border border-white/10"></div>
+
+                <div class="relative mx-auto max-w-5xl text-center">
+                    <div class="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full border border-white/20 bg-white/10">
+                        <svg class="h-10 w-10 text-[#C5D0DE]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M5 13l4 4L19 7" />
                         </svg>
                     </div>
-                    <h1 class="mb-2 text-3xl font-bold text-gray-900">
-                        Booking Confirmed
-                    </h1>
-                    <p class="text-gray-600">
-                        Reservation #{{ reservation.reservation_number }}
-                    </p>
-                </div>
 
-                <!-- Clean two-column layout with proper alignment -->
-                <div class="grid gap-8 lg:grid-cols-3">
-                    <!-- Main Details -->
-                    <div class="space-y-8 lg:col-span-2">
-                        <!-- Car Information -->
-                        <div class="rounded-lg border border-gray-200 p-6">
-                            <h2
-                                class="mb-6 text-xl font-semibold text-gray-900"
-                            >
-                                Vehicle Details
-                            </h2>
-                            <div class="flex items-start space-x-6">
-                                <img
-                                    :src="reservation.car.image_url"
-                                    :alt="`${reservation.car.make} ${reservation.car.model}`"
-                                    class="h-24 w-32 rounded-lg object-cover"
-                                />
-                                <div class="space-y-2">
-                                    <h3
-                                        class="text-lg font-medium text-gray-900"
-                                    >
-                                        {{ reservation.car.make }}
-                                        {{ reservation.car.model }} - {{ reservation.car.year }}
-                                    </h3>
-                                    <p class="bg-gray-100 px-2 rounded w-fit">
-                                        {{ reservation.car.fuel_type }}
+                    <p class="mb-3 text-xs font-semibold uppercase tracking-[0.25em] text-[#C5D0DE]">
+                        Reservation details
+                    </p>
+
+                    <h1 class="text-3xl font-bold sm:text-4xl">
+                        Booking submitted successfully
+                    </h1>
+
+                    <p class="mx-auto mt-4 max-w-2xl leading-7 text-slate-300">
+                        Thank you, {{ reservation.user.name }}. Your reservation details are ready below.
+                    </p>
+
+                    <div class="mx-auto mt-7 inline-flex flex-wrap items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/10 px-5 py-3">
+                        <span class="text-sm text-slate-300">Reservation number</span>
+                        <span class="font-bold tracking-wide text-white">
+                            {{ reservation.reservation_number }}
+                        </span>
+                    </div>
+                </div>
+            </section>
+
+            <div class="mx-auto max-w-7xl px-4 pt-8 sm:px-6 lg:px-8">
+                <div class="grid items-start gap-7 lg:grid-cols-3">
+                    <!-- Main details -->
+                    <div class="space-y-6 lg:col-span-2">
+                        <!-- Vehicle card -->
+                        <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                            <div class="flex items-center justify-between border-b border-slate-100 px-5 py-5 sm:px-7">
+                                <div>
+                                    <p class="text-xs font-semibold uppercase tracking-[0.15em] text-[#58779D]">
+                                        Your selected vehicle
                                     </p>
-                                    <p class="text-gray-600">
+                                    <h2 class="mt-1 text-xl font-bold text-[#101D35]">
+                                        Vehicle details
+                                    </h2>
+                                </div>
+                                <span class="rounded-lg bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-600">
+                                    {{ reservation.car.year }}
+                                </span>
+                            </div>
+
+                            <div class="grid sm:grid-cols-5">
+                                <div class="h-56 bg-slate-100 sm:col-span-2 sm:h-full">
+                                    <img
+                                        v-if="reservation.car.image_url"
+                                        :src="reservation.car.image_url"
+                                        :alt="`${reservation.car.make} ${reservation.car.model}`"
+                                        class="h-full min-h-56 w-full object-cover"
+                                    />
+                                    <div v-else class="flex h-full min-h-56 items-center justify-center text-sm text-slate-500">
+                                        Vehicle image unavailable
+                                    </div>
+                                </div>
+
+                                <div class="p-5 sm:col-span-3 sm:p-7">
+                                    <h3 class="text-2xl font-bold text-[#101D35]">
+                                        {{ reservation.car.make }} {{ reservation.car.model }}
+                                    </h3>
+
+                                    <span class="mt-3 inline-flex rounded-lg bg-slate-100 px-3 py-2 text-sm capitalize text-slate-700">
+                                        {{ reservation.car.fuel_type }}
+                                    </span>
+
+                                    <p class="mt-5 text-sm leading-7 text-slate-600">
                                         {{ reservation.car.description }}
                                     </p>
                                 </div>
                             </div>
-                        </div>
+                        </section>
 
-                        <!-- Rental Details -->
-                        <div class="rounded-lg border border-gray-200 p-6">
-                            <h2
-                                class="mb-6 text-xl font-semibold text-gray-900"
-                            >
-                                Rental Information
-                            </h2>
-                            <div class="grid gap-8 md:grid-cols-2">
-                                <div>
-                                    <h3 class="mb-4 font-medium text-gray-900">
-                                        Dates
-                                    </h3>
-                                    <div class="space-y-3">
-                                        <div class="flex justify-between">
-                                            <span class="text-gray-600"
-                                                >Pickup:</span
-                                            >
-                                            <span class="font-medium">{{
-                                                new Date(
-                                                    reservation.start_date,
-                                                ).toLocaleDateString()
-                                            }}</span>
+                        <!-- Rental information -->
+                        <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+                            <div class="mb-6">
+                                <p class="text-xs font-semibold uppercase tracking-[0.15em] text-[#58779D]">
+                                    Trip information
+                                </p>
+                                <h2 class="mt-1 text-xl font-bold text-[#101D35]">
+                                    Rental details
+                                </h2>
+                            </div>
+
+                            <div class="grid gap-6 md:grid-cols-2">
+                                <div class="rounded-xl bg-[#F4F6FA] p-5">
+                                    <div class="mb-4 flex items-center gap-3">
+                                        <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-[#101D35] text-white">
+                                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                            </svg>
                                         </div>
-                                        <div class="flex justify-between">
-                                            <span class="text-gray-600"
-                                                >Return:</span
-                                            >
-                                            <span class="font-medium">{{
-                                                new Date(
-                                                    reservation.end_date,
-                                                ).toLocaleDateString()
-                                            }}</span>
+                                        <h3 class="font-bold text-[#101D35]">Rental dates</h3>
+                                    </div>
+
+                                    <div class="space-y-4">
+                                        <div>
+                                            <p class="text-xs text-slate-500">Pickup date</p>
+                                            <p class="mt-1 font-semibold text-slate-800">
+                                                {{ formatDate(reservation.start_date) }}
+                                            </p>
+                                        </div>
+                                        <div class="border-t border-slate-200 pt-4">
+                                            <p class="text-xs text-slate-500">Return date</p>
+                                            <p class="mt-1 font-semibold text-slate-800">
+                                                {{ formatDate(reservation.end_date) }}
+                                            </p>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div>
-                                    <h3 class="mb-4 font-medium text-gray-900">
-                                        Locations
-                                    </h3>
-                                    <div class="space-y-3">
-                                        <div class="flex justify-between">
-                                            <span class="text-gray-600"
-                                                >Pickup:</span
-                                            >
-                                            <span class="font-medium">{{
-                                                reservation.pickup_location
-                                            }}</span>
+                                <div class="rounded-xl bg-[#F4F6FA] p-5">
+                                    <div class="mb-4 flex items-center gap-3">
+                                        <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-[#101D35] text-white">
+                                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            </svg>
                                         </div>
-                                        <div class="flex justify-between">
-                                            <span class="text-gray-600"
-                                                >Return:</span
-                                            >
-                                            <span class="font-medium">{{
-                                                reservation.return_location
-                                            }}</span>
+                                        <h3 class="font-bold text-[#101D35]">Locations</h3>
+                                    </div>
+
+                                    <div class="space-y-4">
+                                        <div>
+                                            <p class="text-xs text-slate-500">Pickup location</p>
+                                            <p class="mt-1 font-semibold text-slate-800">
+                                                {{ reservation.pickup_location }}
+                                            </p>
+                                        </div>
+                                        <div class="border-t border-slate-200 pt-4">
+                                            <p class="text-xs text-slate-500">Return location</p>
+                                            <p class="mt-1 font-semibold text-slate-800">
+                                                {{ reservation.return_location }}
+                                            </p>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        </section>
 
-                        <!-- Contact Information -->
-                        <div class="rounded-lg border border-gray-200 p-6">
-                            <h2
-                                class="mb-6 text-xl font-semibold text-gray-900"
-                            >
-                                Contact Details
+                        <!-- Customer details -->
+                        <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+                            <p class="text-xs font-semibold uppercase tracking-[0.15em] text-[#58779D]">
+                                Reservation owner
+                            </p>
+                            <h2 class="mb-6 mt-1 text-xl font-bold text-[#101D35]">
+                                Contact information
                             </h2>
-                            <div class="grid gap-8 md:grid-cols-2">
-                                    <div class="flex gap-2">
-                                        <span class="text-gray-600">Name:</span>
-                                        <span class="font-medium">{{
-                                            reservation.user.name
-                                        }}</span>
-                                    </div>
-                                    <div class="flex gap-2">
-                                        <span class="text-gray-600"
-                                            >Email:</span
-                                        >
-                                        <span class="font-medium">{{
-                                            reservation.user.email
-                                        }}</span>
-                                    </div>
+
+                            <div class="grid gap-5 sm:grid-cols-2">
+                                <div class="rounded-xl border border-slate-200 p-4">
+                                    <p class="text-sm text-slate-500">Full name</p>
+                                    <p class="mt-1 break-words font-semibold text-[#101D35]">
+                                        {{ reservation.user.name }}
+                                    </p>
+                                </div>
+
+                                <div class="rounded-xl border border-slate-200 p-4">
+                                    <p class="text-sm text-slate-500">Email address</p>
+                                    <p class="mt-1 break-all font-semibold text-[#101D35]">
+                                        {{ reservation.user.email }}
+                                    </p>
+                                </div>
                             </div>
-                        </div>
+                        </section>
                     </div>
 
-                    <!-- Clean sidebar with price summary and next steps -->
-                    <div class="space-y-6">
-                        <!-- Price Summary -->
-                        <div class="rounded-lg border border-gray-200 p-6">
-                            <h2
-                                class="mb-4 text-xl font-semibold text-gray-900"
-                            >
-                                Summary
-                            </h2>
-                            <div class="space-y-3">
-                                <div class="flex justify-between">
-                                    <span class="text-gray-600">Status:</span>
-                                    <span
-                                        class="rounded-full bg-yellow-100 px-3 py-1 text-sm text-yellow-800 capitalize"
-                                    >
+                    <!-- Sidebar -->
+                    <aside class="space-y-6 lg:sticky lg:top-6">
+                        <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                            <div class="bg-[#101D35] p-6 text-white">
+                                <p class="text-sm text-slate-300">Reservation overview</p>
+                                <h2 class="mt-1 text-2xl font-bold">Booking summary</h2>
+                            </div>
+
+                            <div class="space-y-5 p-6">
+                                <div>
+                                    <p class="mb-2 text-sm text-slate-500">Current status</p>
+                                    <span class="inline-flex rounded-full px-3 py-1.5 text-sm font-semibold capitalize" :class="statusClass">
                                         {{ reservation.status }}
                                     </span>
                                 </div>
-                                <div class="border-t pt-3">
-                                    <div
-                                        class="flex items-center justify-between"
-                                    >
-                                        <span
-                                            class="text-lg font-semibold text-gray-900"
-                                            >Total:</span
-                                        >
-                                        <span
-                                            class="text-2xl font-bold text-orange-500"
-                                        >
-                                            ${{
-                                                parseFloat(
-                                                    reservation.total_amount,
-                                                ).toFixed(2)
-                                            }}
-                                        </span>
+
+                                <div class="border-t border-slate-200 pt-5">
+                                    <p class="text-sm text-slate-500">Reservation number</p>
+                                    <p class="mt-1 break-words font-bold text-[#101D35]">
+                                        {{ reservation.reservation_number }}
+                                    </p>
+                                </div>
+
+                                <div class="border-t border-slate-200 pt-5">
+                                    <p class="text-sm text-slate-500">Total reservation amount</p>
+                                    <p class="mt-2 text-3xl font-bold text-[#101D35]">
+                                        {{ formatPrice(reservation.total_amount) }}
+                                    </p>
+                                </div>
+
+                                <div class="rounded-xl border border-slate-200 bg-[#F4F6FA] p-4">
+                                    <p class="text-sm font-semibold text-[#101D35]">
+                                        Keep your reservation number
+                                    </p>
+                                    <p class="mt-1 text-sm leading-6 text-slate-600">
+                                        Use it to identify your booking when checking its status.
+                                    </p>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                            <h2 class="text-lg font-bold text-[#101D35]">
+                                What's next?
+                            </h2>
+
+                            <div class="mt-5 space-y-5">
+                                <div class="flex gap-3">
+                                    <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#101D35] text-sm font-bold text-white">1</span>
+                                    <div>
+                                        <p class="font-semibold text-slate-800">Check booking status</p>
+                                        <p class="mt-1 text-sm leading-6 text-slate-500">
+                                            Review the current status in your reservations.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div class="flex gap-3">
+                                    <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#101D35] text-sm font-bold text-white">2</span>
+                                    <div>
+                                        <p class="font-semibold text-slate-800">Watch for updates</p>
+                                        <p class="mt-1 text-sm leading-6 text-slate-500">
+                                            Check for any booking updates or instructions.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div class="flex gap-3">
+                                    <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#101D35] text-sm font-bold text-white">3</span>
+                                    <div>
+                                        <p class="font-semibold text-slate-800">Prepare your documents</p>
+                                        <p class="mt-1 text-sm leading-6 text-slate-500">
+                                            Keep your driving licence ready for pickup.
+                                        </p>
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        </section>
 
-                        <!-- Next Steps -->
-                        <div class="rounded-lg border border-gray-200 p-6">
-                            <h2
-                                class="mb-4 text-xl font-semibold text-gray-900"
-                            >
-                                Next Steps
-                            </h2>
-                            <div class="space-y-4 text-sm text-gray-700">
-                                <div class="flex items-start space-x-3">
-                                    <span
-                                        class="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-medium"
-                                        >1</span
-                                    >
-                                    <span
-                                        >We'll review your booking within 24
-                                        hours</span
-                                    >
-                                </div>
-                                <div class="flex items-start space-x-3">
-                                    <span
-                                        class="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-medium"
-                                        >2</span
-                                    >
-                                    <span
-                                        >You'll receive confirmation email with
-                                        payment details</span
-                                    >
-                                </div>
-                                <div class="flex items-start space-x-3">
-                                    <span
-                                        class="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-medium"
-                                        >3</span
-                                    >
-                                    <span
-                                        >Bring your license and confirmation on
-                                        pickup day</span
-                                    >
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Action Buttons -->
                         <div class="space-y-3">
                             <a
                                 :href="index.url()"
-                                class="block w-full rounded-lg bg-black px-6 py-3 text-center font-medium text-white transition-colors duration-200 hover:bg-gray-800"
+                                class="flex w-full items-center justify-center rounded-xl bg-[#101D35] px-5 py-4 text-center font-semibold text-white transition hover:bg-[#263F60]"
                             >
-                                View My Bookings
+                                View my bookings
                             </a>
+
                             <a
                                 :href="fleet.url()"
-                                class="block w-full rounded-lg border border-gray-300 bg-white px-6 py-3 text-center font-medium text-gray-900 transition-colors duration-200 hover:bg-gray-50"
+                                class="flex w-full items-center justify-center rounded-xl border border-slate-300 bg-white px-5 py-4 text-center font-semibold text-[#101D35] transition hover:bg-slate-100"
                             >
-                                Browse More Cars
+                                Browse more cars
                             </a>
                         </div>
-                    </div>
+                    </aside>
                 </div>
             </div>
         </div>

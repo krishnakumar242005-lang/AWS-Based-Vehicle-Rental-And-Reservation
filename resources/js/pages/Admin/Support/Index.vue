@@ -1,6 +1,5 @@
+```vue
 <script setup lang="ts">
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
@@ -9,85 +8,86 @@ import { index, show } from '@/routes/admin/support';
 const props = defineProps<{
     tickets: {
         data: Array<{
-            id: number
-            subject: string
-            message: string
-            status: string
-            user?: { id: number; name: string; email: string }
-            guest_name?: string
-            guest_email?: string
-            created_at: string
-            updated_at: string
-        }>
-        links: Array<{ url: string | null; label: string; active: boolean }>
-    }
+            id: number;
+            subject: string;
+            message: string;
+            status: string;
+            user?: { id: number; name: string; email: string };
+            guest_name?: string;
+            guest_email?: string;
+            created_at: string;
+            updated_at: string;
+        }>;
+        links: Array<{ url: string | null; label: string; active: boolean }>;
+    };
     filters: {
-        search?: string
-        status?: string
-        type?: 'customer' | 'guest'
-    }
-    statuses: Record<string, { label: string; color: string }>
+        search?: string;
+        status?: string;
+        type?: 'customer' | 'guest';
+    };
+    statuses: Record<string, { label: string; color: string }>;
     statusCounts: {
-        customer: Record<string, number>
-        guest: Record<string, number>
-    }
+        customer: Record<string, number>;
+        guest: Record<string, number>;
+    };
 }>();
 
 const search = ref(props.filters?.search || '');
 const statusFilter = ref(props.filters?.status || 'all');
-const ticketType = ref<typeof props.filters.type>(props.filters?.type || 'customer');
+const ticketType = ref<'customer' | 'guest'>(
+    props.filters?.type || 'customer',
+);
 
-// Generate status colors based on the colors from the backend
 const statusColors = computed(() => {
     const colors: Record<string, { bg: string; text: string; dot: string }> = {};
+
     for (const [status, data] of Object.entries(props.statuses || {})) {
-        const hex = (data as any).color?.replace('#', '') || '6B7280';
+        const hex = data.color?.replace('#', '') || '6B7280';
         const r = parseInt(hex.substring(0, 2), 16);
         const g = parseInt(hex.substring(2, 4), 16);
         const b = parseInt(hex.substring(4, 6), 16);
+
         colors[status] = {
-            bg: `rgba(${r}, ${g}, ${b}, 0.1)`,
-            text: (data as any).color,
-            dot: (data as any).color,
+            bg: `rgba(${r}, ${g}, ${b}, 0.12)`,
+            text: data.color || '#6B7280',
+            dot: data.color || '#6B7280',
         };
     }
+
     return colors;
 });
 
-const getStatusColor = (status: string) => {
-    return statusColors.value[status] || {
+const getStatusColor = (status: string) =>
+    statusColors.value[status] || {
         bg: 'rgba(107, 114, 128, 0.1)',
         text: '#6B7280',
         dot: '#6B7280',
     };
-};
 
-const getStatusCount = (type: 'customer' | 'guest' | undefined, status: string): number => {
-    if (!type) return 0;
-    return props.statusCounts?.[type]?.[status] || 0;
-};
+const getStatusCount = (
+    type: 'customer' | 'guest',
+    status: string,
+): number => props.statusCounts?.[type]?.[status] || 0;
 
-const getTotalCount = (type: 'customer' | 'guest' | undefined): number => {
-    if (!type) return 0;
-    return props.statusCounts?.[type]?.all || 0;
-};
+const getTotalCount = (type: 'customer' | 'guest'): number =>
+    props.statusCounts?.[type]?.all || 0;
 
 const doSearch = () => {
     router.get(
         index().url,
         {
-            search: search.value,
+            search: search.value || null,
             status: statusFilter.value === 'all' ? null : statusFilter.value,
             type: ticketType.value,
         },
         {
             preserveState: true,
+            preserveScroll: true,
             replace: true,
         },
     );
 };
 
-// Watch for changes in search and ticket type to trigger search
 watch(search, (newVal, oldVal) => {
     if (newVal === '' && oldVal !== '') doSearch();
 });
@@ -96,15 +96,14 @@ watch(ticketType, () => {
     doSearch();
 });
 
-const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
+const formatDate = (dateString: string) =>
+    new Date(dateString).toLocaleDateString('en-IN', {
         day: 'numeric',
+        month: 'short',
+        year: 'numeric',
         hour: '2-digit',
         minute: '2-digit',
     });
-};
 
 function goToTicket(id: number) {
     router.visit(show(id).url);
@@ -112,201 +111,281 @@ function goToTicket(id: number) {
 </script>
 
 <template>
-    <Head title="Support" />
+    <Head title="Support Tickets" />
+
     <AdminLayout>
-        <main class="flex-1 p-8 space-y-6">
-            <div class="flex items-center justify-between gap-4">
-                <h1 class="text-2xl font-semibold">Support Tickets</h1>
-            </div>
-
-            <!-- Ticket Type Toggle -->
-            <div class="bg-muted p-1 rounded-lg flex">
-                <label class="flex-1">
-                    <input 
-                        type="radio" 
-                        v-model="ticketType" 
-                        value="customer" 
-                        class="hidden peer"
-                        @change="doSearch"
-                    >
-                    <div 
-                        class="flex flex-col items-center justify-center p-3 rounded-md cursor-pointer transition-colors"
-                        :class="{
-                            'bg-white shadow-sm border border-gray-200': ticketType === 'customer',
-                            'hover:bg-gray-50': ticketType !== 'customer'
-                        }"
-                    >
-                        <span class="font-medium">Customer Tickets</span>
-                        <span class="text-sm text-muted-foreground">
-                            {{ getTotalCount('customer') }} total
-                        </span>
-                    </div>
-                </label>
-                <label class="flex-1">
-                    <input 
-                        type="radio" 
-                        v-model="ticketType" 
-                        value="guest" 
-                        class="hidden peer"
-                        @change="doSearch"
-                    >
-                    <div 
-                        class="flex flex-col items-center justify-center p-3 rounded-md cursor-pointer transition-colors"
-                        :class="{
-                            'bg-white shadow-sm border border-gray-200': ticketType === 'guest',
-                            'hover:bg-gray-50': ticketType !== 'guest'
-                        }"
-                    >
-                        <span class="font-medium">Guest Tickets</span>
-                        <span class="text-sm text-muted-foreground">
-                            {{ getTotalCount('guest') }} total
-                        </span>
-                    </div>
-                </label>
-            </div>
-
-            <!-- Search and Filter -->
-            <div class="flex flex-col gap-4">
-                <div class="flex items-center gap-2">
-                    <Input
-                        v-model="search"
-                        :placeholder="`Search ${ticketType} tickets...`"
-                        class="max-w-md"
-                        @keyup.enter="doSearch"
-                    />
-                    <Button @click="doSearch">Search</Button>
+        <main class="min-h-full space-y-6 bg-[#F4F6FA] px-4 py-6 sm:px-6 lg:px-8">
+            <!-- Page header -->
+            <section class="flex flex-col gap-4 rounded-2xl bg-[#101D35] p-6 text-white shadow-lg sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <p class="mb-2 text-xs font-semibold uppercase tracking-[0.25em] text-[#C5D0DE]">
+                        Customer care
+                    </p>
+                    <h1 class="text-2xl font-bold sm:text-3xl">
+                        Support Tickets
+                    </h1>
+                    <p class="mt-2 text-sm text-slate-300">
+                        Manage customer questions and guest support requests.
+                    </p>
                 </div>
 
-                <!-- Status Filter -->
-                <div class="flex flex-wrap items-center gap-2">
-                    <label class="inline-flex items-center">
-                        <input type="radio" class="hidden" v-model="statusFilter" value="all" @change="doSearch" />
-                        <span
-                            class="px-3 py-1.5 text-sm rounded-full cursor-pointer transition-colors"
-                            :class="{
-                                'bg-primary text-primary-foreground': statusFilter === 'all',
-                                'bg-muted text-muted-foreground hover:bg-muted/80': statusFilter !== 'all',
-                            }"
-                        >
-                            All ({{ getTotalCount(ticketType) }})
-                        </span>
-                    </label>
+                <div class="rounded-xl border border-[#58779D] bg-[#263F60] px-5 py-4">
+                    <p class="text-sm text-[#C5D0DE]">Total tickets</p>
+                    <p class="mt-1 text-3xl font-bold">
+                        {{ getTotalCount(ticketType) }}
+                    </p>
+                </div>
+            </section>
 
-                    <template v-for="(status, key) in statuses" :key="key">
-                        <label class="inline-flex items-center">
-                            <input type="radio" class="hidden" v-model="statusFilter" :value="key" @change="doSearch" />
+            <!-- Ticket type selector -->
+            <section class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <label class="cursor-pointer">
+                    <input
+                        v-model="ticketType"
+                        type="radio"
+                        value="customer"
+                        class="peer sr-only"
+                    />
+                    <div
+                        class="flex items-center justify-between rounded-2xl border bg-white p-5 shadow-sm transition hover:shadow-md"
+                        :class="ticketType === 'customer'
+                            ? 'border-[#263F60] ring-2 ring-[#263F60]/15'
+                            : 'border-[#DCE3ED]'"
+                    >
+                        <div class="flex items-center gap-4">
+                            <span class="flex h-12 w-12 items-center justify-center rounded-xl bg-[#E5EBF3] text-[#263F60]">
+                                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M20 11.5a7.5 7.5 0 0 1-11.2 6.5L4 19l1.1-4.2A7.5 7.5 0 1 1 20 11.5Z"/>
+                                </svg>
+                            </span>
+                            <div>
+                                <p class="font-bold text-[#101D35]">Customer Tickets</p>
+                                <p class="mt-1 text-sm text-slate-500">Registered customers</p>
+                            </div>
+                        </div>
+                        <span class="rounded-full bg-[#EEF2F7] px-3 py-1.5 text-sm font-bold text-[#263F60]">
+                            {{ getTotalCount('customer') }}
+                        </span>
+                    </div>
+                </label>
+
+                <label class="cursor-pointer">
+                    <input
+                        v-model="ticketType"
+                        type="radio"
+                        value="guest"
+                        class="peer sr-only"
+                    />
+                    <div
+                        class="flex items-center justify-between rounded-2xl border bg-white p-5 shadow-sm transition hover:shadow-md"
+                        :class="ticketType === 'guest'
+                            ? 'border-[#263F60] ring-2 ring-[#263F60]/15'
+                            : 'border-[#DCE3ED]'"
+                    >
+                        <div class="flex items-center gap-4">
+                            <span class="flex h-12 w-12 items-center justify-center rounded-xl bg-[#E5EBF3] text-[#263F60]">
+                                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2m6-10a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm8-7a4 4 0 0 1 0 8m2 2a4 4 0 0 1 2 3v2"/>
+                                </svg>
+                            </span>
+                            <div>
+                                <p class="font-bold text-[#101D35]">Guest Tickets</p>
+                                <p class="mt-1 text-sm text-slate-500">Visitors without an account</p>
+                            </div>
+                        </div>
+                        <span class="rounded-full bg-[#EEF2F7] px-3 py-1.5 text-sm font-bold text-[#263F60]">
+                            {{ getTotalCount('guest') }}
+                        </span>
+                    </div>
+                </label>
+            </section>
+
+            <!-- Search and filters -->
+            <section class="rounded-2xl border border-[#DCE3ED] bg-white p-5 shadow-sm sm:p-6">
+                <div class="mb-4">
+                    <h2 class="font-bold text-[#101D35]">Find a ticket</h2>
+                    <p class="mt-1 text-sm text-slate-500">
+                        Search tickets or filter them by status.
+                    </p>
+                </div>
+
+                <form class="flex flex-col gap-3 sm:flex-row" @submit.prevent="doSearch">
+                    <div class="relative flex-1">
+                        <svg class="absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 text-[#58779D]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <circle cx="11" cy="11" r="7" stroke-width="1.8"/>
+                            <path stroke-linecap="round" stroke-width="1.8" d="m16 16 4 4"/>
+                        </svg>
+                        <input
+                            v-model="search"
+                            :placeholder="`Search ${ticketType} tickets...`"
+                            class="w-full rounded-xl border border-[#DCE3ED] bg-[#F8FAFC] py-3 pr-4 pl-10 text-sm text-[#101D35] outline-none transition placeholder:text-slate-400 focus:border-[#58779D] focus:ring-2 focus:ring-[#58779D]/15"
+                        />
+                    </div>
+
+                    <button
+                        type="submit"
+                        class="rounded-xl bg-[#101D35] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#263F60]"
+                    >
+                        Search tickets
+                    </button>
+                </form>
+
+                <div class="mt-5">
+                    <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                        Filter by status
+                    </p>
+
+                    <div class="flex flex-wrap gap-2">
+                        <label class="cursor-pointer">
+                            <input v-model="statusFilter" type="radio" value="all" class="sr-only" @change="doSearch"/>
                             <span
-                                class="px-3 py-1.5 text-sm rounded-full cursor-pointer transition-colors flex items-center gap-1.5"
-                                :class="{
-                                    'bg-primary text-primary-foreground': statusFilter === key,
-                                    'bg-muted text-muted-foreground hover:bg-muted/80': statusFilter !== key,
-                                }"
+                                class="inline-flex rounded-full border px-3.5 py-2 text-sm font-medium transition"
+                                :class="statusFilter === 'all'
+                                    ? 'border-[#101D35] bg-[#101D35] text-white'
+                                    : 'border-[#DCE3ED] bg-white text-[#263F60] hover:bg-[#F4F6FA]'"
                             >
-                                <span class="w-2 h-2 rounded-full" :style="{ backgroundColor: status.color }" />
+                                All ({{ getTotalCount(ticketType) }})
+                            </span>
+                        </label>
+
+                        <label v-for="(status, key) in statuses" :key="key" class="cursor-pointer">
+                            <input v-model="statusFilter" type="radio" :value="key" class="sr-only" @change="doSearch"/>
+                            <span
+                                class="inline-flex items-center gap-2 rounded-full border px-3.5 py-2 text-sm font-medium transition"
+                                :class="statusFilter === key
+                                    ? 'border-[#263F60] bg-[#E5EBF3] text-[#101D35]'
+                                    : 'border-[#DCE3ED] bg-white text-[#263F60] hover:bg-[#F4F6FA]'"
+                            >
+                                <span class="h-2 w-2 rounded-full" :style="{ backgroundColor: status.color }"></span>
                                 {{ status.label }} ({{ getStatusCount(ticketType, key) }})
                             </span>
                         </label>
-                    </template>
+                    </div>
                 </div>
-            </div>
+            </section>
 
-            <!-- Tickets Table -->
-            <div class="overflow-x-auto rounded-md border">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Ticket #
-                            </th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                {{ ticketType === 'customer' ? 'Customer' : 'Guest' }}
-                            </th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Subject
-                            </th>
-                            <th v-if="ticketType === 'customer'" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Status
-                            </th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Created
-                            </th>
-                            <th class="px-4 py-3"></th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-                        <tr 
-                            v-for="ticket in props.tickets.data" 
-                            :key="ticket.id"
-                            class="hover:bg-gray-50 cursor-pointer"
-                            @click="goToTicket(ticket.id)"
-                        >
-                            <td class="px-4 py-3 text-sm text-gray-900">
-                                #{{ ticket.id }}
-                            </td>
-                            <td class="px-4 py-3">
-                                <div class="font-medium">
-                                    {{ ticketType === 'customer' ? ticket.user?.name : ticket.guest_name }}
-                                </div>
-                                <div class="text-xs text-gray-500">
-                                    {{ ticketType === 'customer' ? ticket.user?.email : ticket.guest_email }}
-                                </div>
-                            </td>
-                            <td class="px-4 py-3 text-sm text-gray-900">
-                                <div class="font-medium">{{ ticket.subject }}</div>
-                                <div class="text-xs text-gray-500 line-clamp-1">
-                                    {{ ticket.message }}
-                                </div>
-                            </td>
-                            <td v-if="ticketType === 'customer'" class="px-4 py-3">
-                                <span
-                                    class="inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-xs font-medium"
-                                    :style="{
-                                        backgroundColor: getStatusColor(ticket.status).bg,
-                                        color: getStatusColor(ticket.status).text,
-                                    }"
-                                >
-                                    <span 
-                                        class="w-2 h-2 rounded-full" 
-                                        :style="{ backgroundColor: getStatusColor(ticket.status).dot }"
-                                    />
-                                    {{ statuses[ticket.status]?.label || ticket.status }}
-                                </span>
-                            </td>
-                            <td class="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">
-                                {{ formatDate(ticket.created_at) }}
-                            </td>
-                        </tr>
-                        <tr v-if="props.tickets.data.length === 0">
-                            <td colspan="6" class="px-4 py-6 text-center text-gray-500">
-                                No tickets found.
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+            <!-- Tickets table -->
+            <section class="overflow-hidden rounded-2xl border border-[#DCE3ED] bg-white shadow-sm">
+                <div class="flex items-center justify-between border-b border-[#E5EAF1] px-5 py-4 sm:px-6">
+                    <div>
+                        <h2 class="font-bold text-[#101D35]">Ticket list</h2>
+                        <p class="mt-1 text-sm text-slate-500">
+                            {{ ticketType === 'customer' ? 'Registered customer requests' : 'Guest requests' }}
+                        </p>
+                    </div>
+                    <span class="rounded-lg bg-[#EEF2F7] px-3 py-2 text-xs font-semibold text-[#263F60]">
+                        {{ props.tickets.data.length }} shown
+                    </span>
+                </div>
 
-            <!-- Pagination -->
-            <nav v-if="props.tickets.links?.length > 3" class="flex justify-center">
-                <div class="flex gap-1">
+                <div class="overflow-x-auto">
+                    <table class="min-w-[760px] w-full text-left">
+                        <thead class="bg-[#101D35] text-xs font-semibold uppercase tracking-wider text-[#C5D0DE]">
+                            <tr>
+                                <th class="px-5 py-4">Ticket</th>
+                                <th class="px-5 py-4">{{ ticketType === 'customer' ? 'Customer' : 'Guest' }}</th>
+                                <th class="px-5 py-4">Subject</th>
+                                <th v-if="ticketType === 'customer'" class="px-5 py-4">Status</th>
+                                <th class="px-5 py-4">Created</th>
+                                <th class="px-5 py-4">Action</th>
+                            </tr>
+                        </thead>
+
+                        <tbody class="divide-y divide-[#E5EAF1]">
+                            <tr
+                                v-for="ticket in props.tickets.data"
+                                :key="ticket.id"
+                                class="cursor-pointer transition hover:bg-[#F4F6FA]"
+                                @click="goToTicket(ticket.id)"
+                            >
+                                <td class="px-5 py-4">
+                                    <span class="font-bold text-[#263F60]">#{{ ticket.id }}</span>
+                                </td>
+
+                                <td class="px-5 py-4">
+                                    <p class="font-semibold text-[#101D35]">
+                                        {{ ticketType === 'customer' ? ticket.user?.name : ticket.guest_name }}
+                                    </p>
+                                    <p class="mt-1 text-xs text-slate-500">
+                                        {{ ticketType === 'customer' ? ticket.user?.email : ticket.guest_email }}
+                                    </p>
+                                </td>
+
+                                <td class="max-w-xs px-5 py-4">
+                                    <p class="font-semibold text-[#101D35]">{{ ticket.subject }}</p>
+                                    <p class="mt-1 line-clamp-2 text-sm text-slate-500">{{ ticket.message }}</p>
+                                </td>
+
+                                <td v-if="ticketType === 'customer'" class="px-5 py-4">
+                                    <span
+                                        class="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold"
+                                        :style="{
+                                            backgroundColor: getStatusColor(ticket.status).bg,
+                                            color: getStatusColor(ticket.status).text,
+                                        }"
+                                    >
+                                        <span class="h-2 w-2 rounded-full" :style="{ backgroundColor: getStatusColor(ticket.status).dot }"></span>
+                                        {{ statuses[ticket.status]?.label || ticket.status }}
+                                    </span>
+                                </td>
+
+                                <td class="whitespace-nowrap px-5 py-4 text-sm text-slate-500">
+                                    {{ formatDate(ticket.created_at) }}
+                                </td>
+
+                                <td class="px-5 py-4">
+                                    <button
+                                        type="button"
+                                        class="inline-flex items-center gap-1 rounded-lg border border-[#DCE3ED] px-3 py-2 text-xs font-semibold text-[#263F60] transition hover:border-[#263F60] hover:bg-[#E5EBF3]"
+                                        @click.stop="goToTicket(ticket.id)"
+                                    >
+                                        View
+                                        <span aria-hidden="true">→</span>
+                                    </button>
+                                </td>
+                            </tr>
+
+                            <tr v-if="props.tickets.data.length === 0">
+                                <td :colspan="ticketType === 'customer' ? 6 : 5" class="px-5 py-16 text-center">
+                                    <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#E5EBF3] text-[#263F60]">
+                                        <svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 10h8M8 14h5m-8 6 1.5-3H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-4 3Z"/>
+                                        </svg>
+                                    </div>
+                                    <p class="mt-4 font-semibold text-[#101D35]">No tickets found</p>
+                                    <p class="mt-1 text-sm text-slate-500">Try another search term or status filter.</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <nav
+                    v-if="props.tickets.links?.length > 3"
+                    class="flex flex-wrap items-center justify-center gap-2 border-t border-[#E5EAF1] bg-[#F8FAFC] px-4 py-4"
+                    aria-label="Pagination"
+                >
                     <template v-for="(link, i) in props.tickets.links" :key="i">
-                        <a
+                        <button
                             v-if="link.url"
-                            :href="link.url"
-                            class="px-3 py-1 rounded-md text-sm"
-                            :class="{
-                                'bg-gray-900 text-white': link.active,
-                                'bg-gray-100 text-gray-700 hover:bg-gray-200': !link.active,
-                            }"
+                            type="button"
+                            class="rounded-lg border px-3 py-2 text-sm transition"
+                            :class="link.active
+                                ? 'border-[#101D35] bg-[#101D35] font-semibold text-white'
+                                : 'border-[#DCE3ED] bg-white text-[#263F60] hover:bg-[#E5EBF3]'"
+                            @click="router.visit(link.url, { preserveScroll: true, preserveState: true })"
                             v-html="link.label"
-                        ></a>
-                        <span 
+                        ></button>
+                        <span
                             v-else
-                            class="px-3 py-1 text-gray-400"
+                            class="rounded-lg px-3 py-2 text-sm text-slate-400"
                             v-html="link.label"
                         ></span>
                     </template>
-                </div>
-            </nav>
+                </nav>
+            </section>
         </main>
     </AdminLayout>
 </template>
+```

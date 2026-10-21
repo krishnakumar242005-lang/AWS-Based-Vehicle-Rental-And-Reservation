@@ -1,7 +1,7 @@
+
 <script setup lang="ts">
-import CarCard from '@/components/CarCard.vue';
 import HomeLayout from '@/layouts/HomeLayout.vue';
-import { Head, usePage } from '@inertiajs/vue3';
+import { Head, Link, usePage } from '@inertiajs/vue3';
 import { fleet } from '@/routes';
 import { about } from '@/routes';
 
@@ -10,370 +10,329 @@ interface Car {
     make: string;
     model: string;
     year: number;
-    price_per_day: string;
-    description: string;
-    fuel_type: string;
-    image_url: string;
+    price_per_day: string | number;
+    description?: string;
+    fuel_type?: string;
+    image_url?: string;
+    image?: string;
     color?: string;
     status?: string;
-    license_plate?: string;
-    image?: string;
 }
 
-const $page = usePage();
-const homeCars = $page.props.homeCars as Car[];
+const page = usePage();
+const homeCars = (page.props.homeCars as Car[] | undefined) ?? [];
+
+const carImage = (car: Car) =>
+    car.image_url || car.image || '/images/hero_image.png';
+
+const formatPrice = (price: string | number) => {
+    const amount = Number(price);
+    return Number.isFinite(amount)
+        ? new Intl.NumberFormat('en-IN', {
+              maximumFractionDigits: 0,
+          }).format(amount)
+        : String(price);
+};
 </script>
 
 <template>
-    <Head>
-        <title>Real Rent Car - Premium Car Rental Service</title>
-        <meta
-            name="description"
-            content="Real Rent Car is a premium car rental platform providing reliable transportation solutions. We offer a wide range of cars for rent, from economy to luxury, for short and long term rentals."
-        />
-    </Head>
+    <Head title="RealRentCar | Premium Car Rental" />
 
     <HomeLayout>
-        <main>
-            <!--  Hero Section with Light Background -->
-            <section
-                class="relative overflow-hidden bg-gradient-to-br from-gray-50 via-white to-gray-100 py-12"
-            >
-                <!-- Background Pattern -->
-                <div class="absolute inset-0 opacity-5">
-                    <div
-                        class="absolute inset-0"
-                        style="
-                            background-image: radial-gradient(
-                                circle at 1px 1px,
-                                rgba(0, 0, 0, 0.15) 1px,
-                                transparent 0
-                            );
-                            background-size: 20px 20px;
-                        "
-                    ></div>
-                </div>
+        <div class="overflow-hidden bg-[#F4F6FA] text-[#101D35]">
 
-                <div class="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                    <div class="grid items-center gap-16 lg:grid-cols-2">
-                        <!--  Left Content -->
-                        <div class="space-y-10">
-                            <div class="space-y-6">
-                                <div
-                                    class="inline-flex items-center rounded-full bg-orange-50 px-4 py-2 text-sm font-semibold text-orange-700 ring-1 ring-orange-200"
-                                >
-                                    <svg
-                                        class="mr-2 h-4 w-4"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            stroke-width="2"
-                                            d="M13 10V3L4 14h7v7l9-11h-7z"
-                                        ></path>
-                                    </svg>
-                                    Premium Car Rental Experience
-                                </div>
+            <!-- HERO -->
+            <section class="relative isolate overflow-hidden bg-[#101D35] text-white">
+                <div class="absolute inset-0 -z-10 bg-gradient-to-br from-[#101D35] via-[#172B48] to-[#263F60]"></div>
+                <div class="absolute -right-24 -top-24 -z-10 h-80 w-80 rounded-full bg-white/5 blur-3xl"></div>
+                <div class="absolute -bottom-32 left-1/3 -z-10 h-96 w-96 rounded-full bg-[#9FB4CE]/10 blur-3xl"></div>
 
-                                <h1
-                                    class="text-3xl leading-tight font-bold text-gray-900 lg:text-6xl"
-                                >
-                                    Drive Your
-                                    <span
-                                        class="bg-gradient-to-r from-orange-500 to-orange-600 bg-clip-text text-transparent"
-                                    >
-                                        Dreams
-                                    </span>
-                                </h1>
+                <div class="mx-auto grid max-w-7xl items-center gap-8 px-5 py-16 sm:px-8 sm:py-20 lg:grid-cols-2 lg:gap-12 lg:px-8 lg:py-24">
+                    <div class="relative z-10">
+                        <div class="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-[#D5E0ED]">
+                            <span class="h-2 w-2 rounded-full bg-[#C5D0DE]"></span>
+                            Your journey starts here
+                        </div>
 
-                                <p
-                                    class="max-w-lg text-lg leading-relaxed text-gray-600"
-                                >
-                                    Experience luxury and reliability with our
-                                    premium fleet. From business meetings to
-                                    weekend adventures, find the perfect vehicle
-                                    for every journey.
-                                </p>
-                            </div>
+                        <h1 class="mt-7 max-w-2xl text-4xl leading-tight font-black tracking-tight sm:text-5xl lg:text-6xl">
+                            Drive your
+                            <span class="text-[#C5D0DE]">dream.</span>
+                            <br />
+                            Own the
+                            <span class="text-[#A8BED8]">journey.</span>
+                        </h1>
 
-                            <div class="flex flex-col gap-4 sm:flex-row">
-                                <a
-                                    :href="fleet.url()"
-                                    class="group cursor-pointer inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-orange-500 to-orange-600  text-md px-5 py-2 font-semibold text-white shadow-xl transition-all duration-200 hover:scale-105 hover:from-orange-600 hover:to-orange-700 hover:shadow-2xl"
-                                >
-                                    <svg
-                                        class="mr-2 h-5 w-5 transition-transform group-hover:translate-x-1"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            stroke-width="2"
-                                            d="M13 7l5 5m0 0l-5 5m5-5H6"
-                                        ></path>
-                                    </svg>
-                                    Browse Fleet
-                                </a>
-                                <a
-                                    :href="about.url()"
-                                    class="inline-flex cursor-pointer items-center justify-center rounded-xl border-2 border-gray-300 bg-white text-md px-5 py-2 font-semibold text-gray-700 transition-all duration-200 hover:border-orange-500 hover:text-orange-600 hover:shadow-lg"
-                                >
-                                    Learn More
-                                </a>
-                            </div>
+                        <p class="mt-6 max-w-xl text-base leading-8 text-slate-300 sm:text-lg">
+                            Find the right car for every journey. Explore our fleet
+                            and enjoy a simple, comfortable, and reliable rental
+                            experience.
+                        </p>
 
-                            <!--  Stats -->
-                            <div
-                                class="grid grid-cols-3 gap-8 border-t border-gray-200 pt-10"
+                        <div class="mt-9 flex flex-col gap-3 sm:flex-row">
+                            <Link
+                                :href="fleet()"
+                                class="inline-flex items-center justify-center gap-3 rounded-xl bg-[#C5D0DE] px-7 py-4 font-bold text-[#101D35] shadow-xl transition hover:-translate-y-1 hover:bg-white"
                             >
-                                <div class="text-center">
-                                    <div
-                                        class="bg-gradient-to-r from-orange-500 to-orange-600 bg-clip-text text-4xl font-bold text-transparent"
-                                    >
-                                        1000+
+                                Explore Our Fleet
+                                <span class="text-xl" aria-hidden="true">→</span>
+                            </Link>
+
+                            <Link
+                                :href="about()"
+                                class="inline-flex items-center justify-center rounded-xl border border-white/25 px-7 py-4 font-bold text-white transition hover:bg-white/10"
+                            >
+                                Discover Our Story
+                            </Link>
+                        </div>
+
+                        <div class="mt-10 grid max-w-md grid-cols-3 gap-4 border-t border-white/15 pt-7">
+                            <div>
+                                <p class="text-2xl font-black sm:text-3xl">Easy</p>
+                                <p class="mt-1 text-xs text-slate-400 sm:text-sm">Reservations</p>
+                            </div>
+                            <div>
+                                <p class="text-2xl font-black sm:text-3xl">Flexible</p>
+                                <p class="mt-1 text-xs text-slate-400 sm:text-sm">Travel plans</p>
+                            </div>
+                            <div>
+                                <p class="text-2xl font-black sm:text-3xl">Simple</p>
+                                <p class="mt-1 text-xs text-slate-400 sm:text-sm">Booking flow</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="relative mx-auto w-full max-w-2xl">
+                        <div class="absolute inset-6 rounded-full bg-[#A8BED8]/10 blur-3xl"></div>
+
+                        <div class="relative overflow-hidden rounded-3xl border border-white/15 bg-white/5 p-3 shadow-2xl backdrop-blur-sm sm:p-5">
+                            <img
+                                src="/images/hero_image.png"
+                                alt="Premium car ready for your next journey"
+                                class="h-64 w-full rounded-2xl object-cover sm:h-80 lg:h-[410px]"
+                            />
+
+                            <div class="absolute bottom-6 left-6 right-6 rounded-2xl border border-white/20 bg-[#101D35]/90 p-4 backdrop-blur-md sm:bottom-8 sm:left-8 sm:right-8 sm:p-5">
+                                <div class="flex items-center justify-between gap-4">
+                                    <div>
+                                        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-[#C5D0DE]">
+                                            Your next adventure
+                                        </p>
+                                        <p class="mt-2 text-lg font-bold sm:text-xl">
+                                            Choose your perfect ride
+                                        </p>
                                     </div>
-                                    <div
-                                        class="mt-1 text-sm font-medium text-gray-600"
+                                    <Link
+                                        :href="fleet()"
+                                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#C5D0DE] text-xl font-bold text-[#101D35] transition hover:bg-white"
+                                        aria-label="Browse available vehicles"
                                     >
-                                        Happy Customers
-                                    </div>
-                                </div>
-                                <div class="text-center">
-                                    <div
-                                        class="bg-gradient-to-r from-orange-500 to-orange-600 bg-clip-text text-4xl font-bold text-transparent"
-                                    >
-                                        150+
-                                    </div>
-                                    <div
-                                        class="mt-1 text-sm font-medium text-gray-600"
-                                    >
-                                        Premium Cars
-                                    </div>
-                                </div>
-                                <div class="text-center">
-                                    <div
-                                        class="bg-gradient-to-r from-orange-500 to-orange-600 bg-clip-text text-4xl font-bold text-transparent"
-                                    >
-                                        24/7
-                                    </div>
-                                    <div
-                                        class="mt-1 text-sm font-medium text-gray-600"
-                                    >
-                                        Support
-                                    </div>
+                                        →
+                                    </Link>
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
 
-                        <!-- Right Image - Optimized for Dark Isometric Image -->
-                        <div class="flex justify-center lg:justify-end">
-                            <div class="relative">
-                                <div
-                                    class="absolute -inset-4 rounded-3xl bg-gradient-to-r from-orange-500/20 to-orange-600/20 blur-2xl"
-                                ></div>
-                                <img
-                                    src="/images/hero_image.png"
-                                    alt="Premium Car Garage - Isometric View"
-                                    class="relative h-auto max-w-full rounded-2xl drop-shadow-2xl"
-                                />
-                            </div>
+                <div class="h-1 bg-gradient-to-r from-[#101D35] via-[#C5D0DE] to-[#101D35]"></div>
+            </section>
+
+            <!-- BENEFIT STRIP -->
+            <section class="relative z-10 mx-auto -mt-1 max-w-7xl px-5 sm:px-8 lg:px-8">
+                <div class="grid gap-px overflow-hidden rounded-2xl border border-[#DCE3ED] bg-[#DCE3ED] shadow-lg sm:grid-cols-3">
+                    <div class="flex items-center gap-4 bg-white p-5 sm:p-6">
+                        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#E8EDF5] text-2xl">🚘</div>
+                        <div>
+                            <h2 class="font-bold">Choice of Vehicles</h2>
+                            <p class="mt-1 text-sm text-slate-500">Find a car for your needs</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4 bg-white p-5 sm:p-6">
+                        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#E8EDF5] text-2xl">📅</div>
+                        <div>
+                            <h2 class="font-bold">Simple Reservations</h2>
+                            <p class="mt-1 text-sm text-slate-500">Plan your dates with ease</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4 bg-white p-5 sm:p-6">
+                        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#E8EDF5] text-2xl">🤝</div>
+                        <div>
+                            <h2 class="font-bold">Customer Support</h2>
+                            <p class="mt-1 text-sm text-slate-500">Help when you need it</p>
                         </div>
                     </div>
                 </div>
             </section>
 
-            <!--  Featured Cars Section -->
-            <section id="fleet" class="bg-white py-24">
-                <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                    <div class="mb-20 text-center">
-                        <div
-                            class="mb-6 inline-flex items-center rounded-full bg-orange-50 px-4 py-2 text-sm font-semibold text-orange-700 ring-1 ring-orange-200"
-                        >
-                            Our Premium Collection
-                        </div>
-                        <h2
-                            class="mb-6 text-4xl font-bold text-gray-900 lg:text-5xl"
-                        >
-                            Discover Our
-                            <span
-                                class="bg-gradient-to-r from-orange-500 to-orange-600 bg-clip-text text-transparent"
-                            >
-                                Elite Fleet
+            <!-- FEATURED CARS -->
+            <section class="mx-auto max-w-7xl px-5 py-20 sm:px-8 lg:px-8 lg:py-24">
+                <div class="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+                    <div>
+                        <p class="text-sm font-black uppercase tracking-[0.2em] text-[#58779D]">
+                            Find your ride
+                        </p>
+                        <h2 class="mt-3 text-3xl font-black tracking-tight sm:text-4xl">
+                            Explore our <span class="text-[#58779D]">fleet.</span>
+                        </h2>
+                        <p class="mt-4 max-w-xl leading-7 text-slate-600">
+                            From everyday drives to special occasions, discover a
+                            vehicle that fits your plans.
+                        </p>
+                    </div>
+
+                    <Link
+                        :href="fleet()"
+                        class="inline-flex items-center gap-2 self-start rounded-xl border border-[#C5D0DE] bg-white px-5 py-3 font-bold text-[#101D35] transition hover:border-[#101D35] hover:bg-[#E8EDF5] sm:self-auto"
+                    >
+                        View All Cars <span aria-hidden="true">→</span>
+                    </Link>
+                </div>
+
+                <div v-if="homeCars.length" class="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                    <article
+                        v-for="car in homeCars"
+                        :key="car.id"
+                        class="group overflow-hidden rounded-2xl border border-[#DCE3ED] bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl"
+                    >
+                        <div class="relative overflow-hidden bg-[#E8EDF5]">
+                            <img
+                                :src="carImage(car)"
+                                :alt="`${car.make} ${car.model}`"
+                                class="h-56 w-full object-cover transition duration-500 group-hover:scale-105"
+                                loading="lazy"
+                            />
+                            <span class="absolute left-4 top-4 rounded-full border border-white/70 bg-white/95 px-3 py-1.5 text-xs font-bold text-[#101D35]">
+                                {{ car.year }}
                             </span>
+                        </div>
+
+                        <div class="p-5">
+                            <p class="text-xs font-bold uppercase tracking-[0.16em] text-[#58779D]">
+                                {{ car.make }}
+                            </p>
+                            <h3 class="mt-2 text-xl font-black">
+                                {{ car.model }}
+                            </h3>
+
+                            <p v-if="car.description" class="mt-2 line-clamp-2 text-sm leading-6 text-slate-500">
+                                {{ car.description }}
+                            </p>
+
+                            <div class="mt-5 flex items-center justify-between gap-3 border-t border-slate-100 pt-5">
+                                <div>
+                                    <p class="text-xl font-black text-[#101D35]">
+                                        ₹{{ formatPrice(car.price_per_day) }}
+                                    </p>
+                                    <p class="text-xs text-slate-500">per day</p>
+                                </div>
+                                <Link
+                                    :href="fleet()"
+                                    class="rounded-xl bg-[#101D35] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#263F60]"
+                                >
+                                    View Details
+                                </Link>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+
+                <div v-else class="mt-10 rounded-2xl border border-dashed border-[#C5D0DE] bg-white px-6 py-12 text-center">
+                    <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#E8EDF5] text-3xl">🚘</div>
+                    <h3 class="mt-5 text-xl font-black">Your next ride awaits</h3>
+                    <p class="mx-auto mt-2 max-w-md leading-7 text-slate-500">
+                        Browse the complete fleet to find a vehicle for your journey.
+                    </p>
+                    <Link
+                        :href="fleet()"
+                        class="mt-6 inline-flex rounded-xl bg-[#101D35] px-6 py-3 font-bold text-white transition hover:bg-[#263F60]"
+                    >
+                        Browse All Vehicles
+                    </Link>
+                </div>
+            </section>
+
+            <!-- WHY CHOOSE US -->
+            <section class="bg-white">
+                <div class="mx-auto max-w-7xl px-5 py-20 sm:px-8 lg:px-8 lg:py-24">
+                    <div class="mx-auto max-w-2xl text-center">
+                        <p class="text-sm font-black uppercase tracking-[0.2em] text-[#58779D]">
+                            The RealRentCar difference
+                        </p>
+                        <h2 class="mt-3 text-3xl font-black tracking-tight sm:text-4xl">
+                            A better way to <span class="text-[#58779D]">travel.</span>
                         </h2>
-                        <p
-                            class="mx-auto max-w-3xl text-xl leading-relaxed text-gray-600"
-                        >
-                            Each vehicle in our collection is meticulously
-                            maintained and equipped with premium features to
-                            ensure your journey is nothing short of exceptional.
+                        <p class="mt-4 leading-7 text-slate-600">
+                            A clear, convenient rental experience from choosing
+                            your vehicle to planning your journey.
                         </p>
                     </div>
 
-                    <div class="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-                        <CarCard
-                            v-for="car in homeCars"
-                            :key="car.id"
-                            :car="car"
-                        />
-                    </div>
+                    <div class="mt-12 grid gap-6 md:grid-cols-3">
+                        <article class="rounded-2xl border border-[#DCE3ED] bg-[#F4F6FA] p-7 transition hover:-translate-y-1 hover:shadow-lg">
+                            <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#101D35] text-2xl text-white">✦</div>
+                            <h3 class="mt-6 text-xl font-black">Vehicles for Every Journey</h3>
+                            <p class="mt-3 leading-7 text-slate-600">
+                                Explore the available fleet and find a vehicle
+                                suited to your travel plans.
+                            </p>
+                        </article>
 
-                    <div class="mt-16 text-center">
-                        <a
-                            :href="fleet.url()"
-                            class="inline-flex cursor-pointer items-center rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-8 py-4 font-semibold text-white shadow-xl transition-all duration-200 hover:scale-105 hover:from-orange-600 hover:to-orange-700 hover:shadow-2xl"
-                        >
-                            <svg
-                                class="mr-2 h-5 w-5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-                                ></path>
-                            </svg>
-                            View Complete Fleet
-                        </a>
+                        <article class="rounded-2xl border border-[#DCE3ED] bg-[#F4F6FA] p-7 transition hover:-translate-y-1 hover:shadow-lg">
+                            <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#101D35] text-2xl text-white">◷</div>
+                            <h3 class="mt-6 text-xl font-black">Convenient Booking</h3>
+                            <p class="mt-3 leading-7 text-slate-600">
+                                Choose your rental dates and follow a simple
+                                reservation process.
+                            </p>
+                        </article>
+
+                        <article class="rounded-2xl border border-[#DCE3ED] bg-[#F4F6FA] p-7 transition hover:-translate-y-1 hover:shadow-lg">
+                            <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#101D35] text-2xl text-white">✓</div>
+                            <h3 class="mt-6 text-xl font-black">Clear Information</h3>
+                            <p class="mt-3 leading-7 text-slate-600">
+                                Review vehicle details and displayed rental
+                                prices before making your reservation.
+                            </p>
+                        </article>
                     </div>
                 </div>
             </section>
 
-            <!--  Features Section -->
-            <section id="services" class="bg-gray-50 py-24">
-                <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                    <div class="mb-20 text-center">
-                        <h2
-                            class="mb-6 text-4xl font-bold text-gray-900 lg:text-5xl"
-                        >
-                            Why Choose
-                            <span
-                                class="bg-gradient-to-r from-orange-500 to-orange-600 bg-clip-text text-transparent"
-                            >
-                                RealRent </span
-                            >?
-                        </h2>
-                        <p class="mx-auto max-w-2xl text-xl text-gray-600">
-                            We're committed to providing an unparalleled car
-                            rental experience with premium service at every
-                            touchpoint.
+            <!-- FINAL CALL TO ACTION -->
+            <section class="px-5 py-16 sm:px-8 lg:px-8 lg:py-20">
+                <div class="relative mx-auto max-w-7xl overflow-hidden rounded-3xl bg-[#101D35] px-6 py-12 text-center text-white sm:px-12 sm:py-16">
+                    <div class="absolute -right-16 -top-24 h-72 w-72 rounded-full bg-white/5 blur-3xl"></div>
+                    <div class="absolute -bottom-24 -left-16 h-64 w-64 rounded-full bg-[#A8BED8]/10 blur-3xl"></div>
+
+                    <div class="relative">
+                        <p class="text-sm font-bold uppercase tracking-[0.22em] text-[#C5D0DE]">
+                            Your journey begins here
                         </p>
-                    </div>
-
-                    <div class="grid gap-12 md:grid-cols-3">
-                        <div class="group text-center">
-                            <div
-                                class="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 shadow-xl transition-transform duration-200 group-hover:scale-110"
+                        <h2 class="mx-auto mt-4 max-w-3xl text-3xl font-black tracking-tight sm:text-4xl lg:text-5xl">
+                            Ready to find your perfect ride?
+                        </h2>
+                        <p class="mx-auto mt-5 max-w-2xl leading-7 text-slate-300">
+                            Explore the fleet, compare available vehicles, and
+                            start planning your next journey with RealRentCar.
+                        </p>
+                        <div class="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+                            <Link
+                                :href="fleet()"
+                                class="rounded-xl bg-[#C5D0DE] px-7 py-4 font-bold text-[#101D35] transition hover:bg-white"
                             >
-                                <svg
-                                    class="h-10 w-10 text-white"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="2"
-                                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                                    ></path>
-                                </svg>
-                            </div>
-                            <h3 class="mb-4 text-2xl font-bold text-gray-900">
-                                Premium Quality
-                            </h3>
-                            <p class="leading-relaxed text-gray-600">
-                                Every vehicle undergoes comprehensive inspection
-                                and maintenance to guarantee your safety,
-                                comfort, and peace of mind.
-                            </p>
-                        </div>
-
-                        <div class="group text-center">
-                            <div
-                                class="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 shadow-xl transition-transform duration-200 group-hover:scale-110"
+                                Explore Vehicles →
+                            </Link>
+                            <Link
+                                :href="about()"
+                                class="rounded-xl border border-white/25 px-7 py-4 font-bold text-white transition hover:bg-white/10"
                             >
-                                <svg
-                                    class="h-10 w-10 text-white"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="2"
-                                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                                    ></path>
-                                </svg>
-                            </div>
-                            <h3 class="mb-4 text-2xl font-bold text-gray-900">
-                                24/7 Support
-                            </h3>
-                            <p class="leading-relaxed text-gray-600">
-                                Our dedicated support team is available around
-                                the clock to assist you with any questions or
-                                concerns during your rental.
-                            </p>
-                        </div>
-
-                        <div class="group text-center">
-                            <div
-                                class="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 shadow-xl transition-transform duration-200 group-hover:scale-110"
-                            >
-                                <svg
-                                    class="h-10 w-10 text-white"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="2"
-                                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"
-                                    ></path>
-                                </svg>
-                            </div>
-                            <h3 class="mb-4 text-2xl font-bold text-gray-900">
-                                Best Value
-                            </h3>
-                            <p class="leading-relaxed text-gray-600">
-                                Transparent pricing with no hidden fees. Get
-                                premium car rental services at competitive rates
-                                with exceptional value.
-                            </p>
+                                Learn About Us
+                            </Link>
                         </div>
                     </div>
                 </div>
             </section>
-        </main>
+
+        </div>
     </HomeLayout>
 </template>
-
-<style scoped>
-.font-sans {
-    font-family:
-        'Inter',
-        -apple-system,
-        BlinkMacSystemFont,
-        'Segoe UI',
-        Roboto,
-        sans-serif;
-}
-
-.line-clamp-2 {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-</style>

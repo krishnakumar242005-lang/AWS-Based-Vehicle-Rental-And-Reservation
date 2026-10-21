@@ -1,9 +1,10 @@
+
 <script setup lang="ts">
 import HomeLayout from '@/layouts/HomeLayout.vue';
 import { book } from '@/routes/fleet';
+import { login } from '@/routes';
 import { router, useForm, usePage } from '@inertiajs/vue3';
 import { computed, watch } from 'vue';
-import { login } from '@/routes';
 
 interface Car {
     id: number;
@@ -19,8 +20,8 @@ interface Car {
     status: string;
 }
 
-const $page = usePage();
-const car = computed<Car>(() => $page.props.car as Car);
+const page = usePage();
+const car = computed(() => page.props.car as Car);
 
 const form = useForm({
     start_date: '',
@@ -29,81 +30,82 @@ const form = useForm({
     return_location: '',
 });
 
-// Calculate rental details
 const rentalDays = computed(() => {
     if (!form.start_date || !form.end_date) return 0;
-    const start = new Date(form.start_date);
-    const end = new Date(form.end_date);
-    const diffTime = end.getTime() - start.getTime();
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    const start = new Date(`${form.start_date}T00:00:00`);
+    const end = new Date(`${form.end_date}T00:00:00`);
+    const difference = end.getTime() - start.getTime();
+
+    return Math.round(difference / (1000 * 60 * 60 * 24));
 });
 
-const subtotal = computed(() => {
-    return rentalDays.value * parseFloat(car.value.price_per_day);
-});
+const dailyRate = computed(() => Number(car.value?.price_per_day) || 0);
 
-const tax = computed(() => {
-    return subtotal.value * 0.07; // 7% tax
-});
+const subtotal = computed(() =>
+    rentalDays.value > 0 ? rentalDays.value * dailyRate.value : 0
+);
 
-const total = computed(() => {
-    return subtotal.value + tax.value;
-});
+const tax = computed(() => subtotal.value * 0.07);
 
-const canSubmit = computed(() => {
-    return (
+const total = computed(() => subtotal.value + tax.value);
+
+const formatPrice = (amount: number | string) =>
+    new Intl.NumberFormat('en-IN', {
+        style: 'currency',
+        currency: 'INR',
+        maximumFractionDigits: 2,
+    }).format(Number(amount) || 0);
+
+const canSubmit = computed(() =>
+    Boolean(
         form.start_date &&
         form.end_date &&
         form.pickup_location &&
         form.return_location &&
         rentalDays.value > 0
-    );
-});
+    )
+);
 
 const submitBooking = () => {
-    const user = $page.props.auth.user;
+    const user = page.props.auth?.user;
 
     if (!user) {
-        // Not authenticated → redirect to login
         router.get(login.url());
         return;
     }
 
     if (user.role === 'client') {
-        // Authenticated and role is "user" → make booking
         form.post(book.url(car.value.id));
         return;
     }
 
     if (user.role === 'admin') {
-        // Authenticated but role is "admin" → show alert
-        alert("You cannot book as an admin.");
+        alert('You cannot book as an admin.');
         return;
     }
 
-    // fallback for any other role
-    alert("Your role does not allow booking.");
+    alert('Your role does not allow booking.');
 };
 
-
-// Auto-populate return location when pickup is selected
 watch(
     () => form.pickup_location,
     (newLocation) => {
         if (newLocation && !form.return_location) {
             form.return_location = newLocation;
         }
-    },
+    }
 );
 
 const images = computed(() => {
-    if (car.value.images && car.value.images.length > 0) {
+    if (car.value?.images?.length) {
         return car.value.images;
     }
+
     return [
         {
-            url: car.value.image_url,
-            alt: `${car.value.make} ${car.value.model}`,
+            url: car.value?.image_url || '',
+            alt: `${car.value?.make || 'Rental'} ${car.value?.model || 'car'}`,
         },
     ];
 });
@@ -118,568 +120,355 @@ const commonLocations = [
     'Business District',
 ];
 </script>
+
 <template>
     <HomeLayout>
-        <div
-            class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8"
-        >
-            <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                <!--  Header -->
-                <div class="mb-8">
-                    <nav
-                        class="mb-6 flex items-center space-x-2 text-sm text-gray-500"
-                    >
-                        <a
-                            href="/fleet"
-                            class="font-medium transition-colors duration-200 hover:text-orange-500"
-                            >Fleet</a
-                        >
-                        <svg
-                            class="h-4 w-4 text-gray-400"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M9 5l7 7-7 7"
-                            ></path>
-                        </svg>
-                        <span class="font-medium text-gray-900"
-                            >{{ car.make }} {{ car.model }}</span
-                        >
+        <div class="min-h-screen bg-[#F4F6FA] pb-16">
+            <!-- Page heading -->
+            <section class="bg-[#101D35] px-4 py-10 text-white sm:py-14">
+                <div class="mx-auto max-w-7xl">
+                    <nav class="mb-5 flex items-center gap-2 text-sm text-slate-300">
+                        <a href="/fleet" class="transition hover:text-white">
+                            Fleet
+                        </a>
+                        <span>/</span>
+                        <span class="text-white">Book your car</span>
                     </nav>
-                    <div class="flex items-center space-x-4">
-                        <div
-                            class="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-r from-orange-500 to-orange-600"
-                        >
-                            <svg
-                                class="h-6 w-6 text-white"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                                ></path>
-                            </svg>
-                        </div>
-                        <div>
-                            <h1
-                                class="text-4xl leading-tight font-bold text-gray-900"
-                            >
-                                Book {{ car.make }} {{ car.model }}
-                            </h1>
-                            <p class="mt-1 text-gray-600">
-                                Complete your reservation in just a few steps
-                            </p>
-                        </div>
-                    </div>
-                </div>
 
-                <div class="grid gap-8 lg:grid-cols-3">
-                    <!--  Car Details Section -->
-                    <div class="space-y-8 lg:col-span-2">
-                        <!--  Car Images -->
-                        <div
-                            class="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-lg"
-                        >
-                            <div
-                                class="relative h-72 bg-gradient-to-br from-gray-100 to-gray-200 sm:h-96"
-                            >
+                    <p class="mb-2 text-sm font-semibold uppercase tracking-[0.2em] text-[#C5D0DE]">
+                        Your journey starts here
+                    </p>
+
+                    <h1 class="text-3xl font-bold sm:text-4xl">
+                        Reserve your vehicle
+                    </h1>
+
+                    <p class="mt-3 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
+                        Choose your dates, select your locations, and review your rental total.
+                    </p>
+                </div>
+            </section>
+
+            <div class="mx-auto max-w-7xl px-4 pt-8 sm:px-6 lg:px-8">
+                <div class="grid items-start gap-8 lg:grid-cols-3">
+                    <!-- Main column -->
+                    <div class="space-y-7 lg:col-span-2">
+                        <!-- Vehicle details -->
+                        <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                            <div class="relative h-64 bg-slate-200 sm:h-96">
                                 <img
-                                    :src="images[0]?.url"
-                                    alt="car image"
-                                    class="h-full w-full object-cover transition-all duration-500"
+                                    v-if="images[0]?.url"
+                                    :src="images[0].url"
+                                    :alt="images[0].alt"
+                                    class="h-full w-full object-cover"
                                 />
+
+                                <div
+                                    v-else
+                                    class="flex h-full items-center justify-center text-slate-500"
+                                >
+                                    Vehicle image unavailable
+                                </div>
+
+                                <div class="absolute bottom-4 left-4 rounded-lg bg-[#101D35]/90 px-4 py-2 text-sm font-semibold text-white backdrop-blur">
+                                    {{ car.year }} model
+                                </div>
                             </div>
 
-                            <!--  Car Info -->
-                            <div class="p-8">
-                                <div
-                                    class="mb-6 flex items-start justify-between"
-                                >
+                            <div class="p-5 sm:p-8">
+                                <div class="flex flex-col justify-between gap-5 sm:flex-row sm:items-start">
                                     <div>
-                                        <h2
-                                            class="mb-2 text-3xl font-bold text-gray-900"
-                                        >
+                                        <p class="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#58779D]">
+                                            Selected vehicle
+                                        </p>
+
+                                        <h2 class="text-2xl font-bold text-[#101D35] sm:text-3xl">
                                             {{ car.make }} {{ car.model }}
                                         </h2>
-                                        <div
-                                            class="flex items-center space-x-6 text-sm text-gray-500"
-                                        >
-                                            <span
-                                                class="flex items-center rounded-full bg-gray-100 px-3 py-1"
-                                            >
-                                                <svg
-                                                    class="mr-2 h-4 w-4"
-                                                    fill="none"
-                                                    stroke="currentColor"
-                                                    viewBox="0 0 24 24"
-                                                >
-                                                    <path
-                                                        stroke-linecap="round"
-                                                        stroke-linejoin="round"
-                                                        stroke-width="2"
-                                                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                                                    ></path>
-                                                </svg>
-                                                {{ car.year }}
-                                            </span>
-                                            <span
-                                                class="flex items-center rounded-full bg-gray-100 px-3 py-1 capitalize"
-                                            >
-                                                <svg
-                                                    class="mr-2 h-4 w-4"
-                                                    fill="none"
-                                                    stroke="currentColor"
-                                                    viewBox="0 0 24 24"
-                                                >
-                                                    <path
-                                                        stroke-linecap="round"
-                                                        stroke-linejoin="round"
-                                                        stroke-width="2"
-                                                        d="M13 10V3L4 14h7v7l9-11h-7z"
-                                                    ></path>
-                                                </svg>
+
+                                        <div class="mt-4 flex flex-wrap gap-2">
+                                            <span class="rounded-lg bg-slate-100 px-3 py-2 text-sm capitalize text-slate-700">
                                                 {{ car.fuel_type }}
                                             </span>
+
+                                            <span class="rounded-lg bg-slate-100 px-3 py-2 text-sm capitalize text-slate-700">
+                                                {{ car.transmission }}
+                                            </span>
+
+                                            <span class="rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-700">
+                                                {{ car.year }}
+                                            </span>
                                         </div>
                                     </div>
-                                    <div class="text-right">
-                                        <div
-                                            class="rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-4 py-2 text-white"
-                                        >
-                                            <span class="text-3xl font-bold"
-                                                >${{ car.price_per_day }}</span
-                                            >
-                                            <span
-                                                class="block text-sm text-orange-100"
-                                                >per day</span
-                                            >
-                                        </div>
+
+                                    <div class="shrink-0 rounded-xl bg-[#101D35] px-5 py-4 text-white sm:text-right">
+                                        <p class="text-2xl font-bold">
+                                            {{ formatPrice(dailyRate) }}
+                                        </p>
+                                        <p class="mt-1 text-sm text-slate-300">
+                                            per day
+                                        </p>
                                     </div>
                                 </div>
 
-                                <p class="leading-relaxed text-gray-600">
-                                    {{ car.description }}
+                                <p class="mt-6 leading-7 text-slate-600">
+                                    {{ car.description || 'Enjoy a comfortable and convenient journey with this rental vehicle.' }}
                                 </p>
                             </div>
-                        </div>
+                        </section>
 
-                        <!--  Booking Form -->
-                        <div
-                            class="rounded-2xl border border-gray-100 bg-white p-8 shadow-lg"
-                        >
-                            <div class="mb-8 flex items-center space-x-3">
-                                <div
-                                    class="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-r from-orange-500 to-orange-600"
-                                >
-                                    <svg
-                                        class="h-5 w-5 text-white"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            stroke-width="2"
-                                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                                        ></path>
+                        <!-- Booking form -->
+                        <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
+                            <div class="mb-8 flex items-center gap-4">
+                                <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-[#101D35] text-white">
+                                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                     </svg>
                                 </div>
-                                <h3 class="text-2xl font-bold text-gray-900">
-                                    Booking Details
-                                </h3>
+
+                                <div>
+                                    <h2 class="text-xl font-bold text-[#101D35] sm:text-2xl">
+                                        Booking details
+                                    </h2>
+                                    <p class="mt-1 text-sm text-slate-500">
+                                        Fields marked * are required.
+                                    </p>
+                                </div>
                             </div>
 
-                            <form class="space-y-8">
-                                <!--  Rental Dates -->
-                                <div class="space-y-4">
-                                    <h4
-                                        class="flex items-center text-lg font-semibold text-gray-900"
-                                    >
-                                        <svg
-                                            class="mr-2 h-5 w-5 text-orange-500"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                stroke-width="2"
-                                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                                            ></path>
-                                        </svg>
-                                        Rental Period
-                                    </h4>
-                                    <div class="grid gap-6 md:grid-cols-2">
-                                        <div class="space-y-2">
-                                            <label
-                                                class="block text-sm font-semibold text-gray-700"
-                                            >
-                                                Pickup Date *
+                            <form class="space-y-8" @submit.prevent="submitBooking">
+                                <!-- Dates -->
+                                <div>
+                                    <h3 class="mb-4 flex items-center gap-2 font-semibold text-[#101D35]">
+                                        <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-[#58779D]">
+                                            1
+                                        </span>
+                                        Rental period
+                                    </h3>
+
+                                    <div class="grid gap-5 sm:grid-cols-2">
+                                        <div>
+                                            <label for="start_date" class="mb-2 block text-sm font-semibold text-slate-700">
+                                                Pickup date *
                                             </label>
+
                                             <input
+                                                id="start_date"
                                                 v-model="form.start_date"
                                                 type="date"
                                                 :min="$page.props.minDate"
                                                 :max="$page.props.maxDate"
                                                 required
-                                                class="w-full rounded-xl border-2 border-gray-200 px-4 py-4 text-lg transition-all duration-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-500"
-                                                :class="{
-                                                    'border-red-500 focus:border-red-500 focus:ring-red-500':
-                                                        form.errors.start_date,
-                                                }"
+                                                class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3.5 text-slate-800 outline-none transition focus:border-[#58779D] focus:ring-2 focus:ring-[#58779D]/20"
+                                                :class="{ 'border-red-500': form.errors.start_date }"
                                             />
-                                            <span
-                                                v-if="form.errors.start_date"
-                                                class="text-sm font-medium text-red-500"
-                                            >
+
+                                            <p v-if="form.errors.start_date" class="mt-2 text-sm text-red-600">
                                                 {{ form.errors.start_date }}
-                                            </span>
+                                            </p>
                                         </div>
 
-                                        <div class="space-y-2">
-                                            <label
-                                                class="block text-sm font-semibold text-gray-700"
-                                            >
-                                                Return Date *
+                                        <div>
+                                            <label for="end_date" class="mb-2 block text-sm font-semibold text-slate-700">
+                                                Return date *
                                             </label>
+
                                             <input
+                                                id="end_date"
                                                 v-model="form.end_date"
                                                 type="date"
-                                                :min="
-                                                    form.start_date ||
-                                                    $page.props.minDate
-                                                "
+                                                :min="form.start_date || $page.props.minDate"
                                                 :max="$page.props.maxDate"
                                                 required
-                                                class="w-full rounded-xl border-2 border-gray-200 px-4 py-4 text-lg transition-all duration-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-500"
-                                                :class="{
-                                                    'border-red-500 focus:border-red-500 focus:ring-red-500':
-                                                        form.errors.end_date,
-                                                }"
+                                                class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3.5 text-slate-800 outline-none transition focus:border-[#58779D] focus:ring-2 focus:ring-[#58779D]/20"
+                                                :class="{ 'border-red-500': form.errors.end_date }"
                                             />
-                                            <span
-                                                v-if="form.errors.end_date"
-                                                class="text-sm font-medium text-red-500"
-                                            >
+
+                                            <p v-if="form.errors.end_date" class="mt-2 text-sm text-red-600">
                                                 {{ form.errors.end_date }}
-                                            </span>
+                                            </p>
                                         </div>
                                     </div>
+
+                                    <p v-if="form.start_date && form.end_date && rentalDays <= 0" class="mt-3 text-sm text-red-600">
+                                        The return date must be after the pickup date.
+                                    </p>
                                 </div>
 
-                                <!--  Locations -->
-                                <div class="space-y-4">
-                                    <h4
-                                        class="flex items-center text-lg font-semibold text-gray-900"
-                                    >
-                                        <svg
-                                            class="mr-2 h-5 w-5 text-orange-500"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                stroke-width="2"
-                                                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                                            ></path>
-                                            <path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                stroke-width="2"
-                                                d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                                            ></path>
-                                        </svg>
-                                        Pickup & Return Locations
-                                    </h4>
-                                    <div class="grid gap-6 md:grid-cols-2">
-                                        <div class="space-y-2">
-                                            <label
-                                                class="block text-sm font-semibold text-gray-700"
-                                            >
-                                                Pickup Location *
+                                <div class="border-t border-slate-200"></div>
+
+                                <!-- Locations -->
+                                <div>
+                                    <h3 class="mb-4 flex items-center gap-2 font-semibold text-[#101D35]">
+                                        <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-[#58779D]">
+                                            2
+                                        </span>
+                                        Pickup and return locations
+                                    </h3>
+
+                                    <div class="grid gap-5 sm:grid-cols-2">
+                                        <div>
+                                            <label for="pickup_location" class="mb-2 block text-sm font-semibold text-slate-700">
+                                                Pickup location *
                                             </label>
+
                                             <select
+                                                id="pickup_location"
                                                 v-model="form.pickup_location"
                                                 required
-                                                class="w-full rounded-xl border-2 border-gray-200 bg-white px-4 py-4 text-lg transition-all duration-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-500"
-                                                :class="{
-                                                    'border-red-500 focus:border-red-500 focus:ring-red-500':
-                                                        form.errors
-                                                            .pickup_location,
-                                                }"
+                                                class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3.5 text-slate-800 outline-none transition focus:border-[#58779D] focus:ring-2 focus:ring-[#58779D]/20"
+                                                :class="{ 'border-red-500': form.errors.pickup_location }"
                                             >
-                                                <option value="">
-                                                    Select pickup location
-                                                </option>
-                                                <option
-                                                    v-for="location in commonLocations"
-                                                    :key="location"
-                                                    :value="location"
-                                                >
+                                                <option value="">Select pickup location</option>
+                                                <option v-for="location in commonLocations" :key="location" :value="location">
                                                     {{ location }}
                                                 </option>
                                             </select>
-                                            <span
-                                                v-if="
-                                                    form.errors.pickup_location
-                                                "
-                                                class="text-sm font-medium text-red-500"
-                                            >
-                                                {{
-                                                    form.errors.pickup_location
-                                                }}
-                                            </span>
+
+                                            <p v-if="form.errors.pickup_location" class="mt-2 text-sm text-red-600">
+                                                {{ form.errors.pickup_location }}
+                                            </p>
                                         </div>
 
-                                        <div class="space-y-2">
-                                            <label
-                                                class="block text-sm font-semibold text-gray-700"
-                                            >
-                                                Return Location *
+                                        <div>
+                                            <label for="return_location" class="mb-2 block text-sm font-semibold text-slate-700">
+                                                Return location *
                                             </label>
+
                                             <select
+                                                id="return_location"
                                                 v-model="form.return_location"
                                                 required
-                                                class="w-full rounded-xl border-2 border-gray-200 bg-white px-4 py-4 text-lg transition-all duration-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-500"
-                                                :class="{
-                                                    'border-red-500 focus:border-red-500 focus:ring-red-500':
-                                                        form.errors
-                                                            .return_location,
-                                                }"
+                                                class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3.5 text-slate-800 outline-none transition focus:border-[#58779D] focus:ring-2 focus:ring-[#58779D]/20"
+                                                :class="{ 'border-red-500': form.errors.return_location }"
                                             >
-                                                <option value="">
-                                                    Select return location
-                                                </option>
-                                                <option
-                                                    v-for="location in commonLocations"
-                                                    :key="location"
-                                                    :value="location"
-                                                >
+                                                <option value="">Select return location</option>
+                                                <option v-for="location in commonLocations" :key="location" :value="location">
                                                     {{ location }}
                                                 </option>
                                             </select>
-                                            <span
-                                                v-if="
-                                                    form.errors.return_location
-                                                "
-                                                class="text-sm font-medium text-red-500"
-                                            >
-                                                {{
-                                                    form.errors.return_location
-                                                }}
-                                            </span>
+
+                                            <p v-if="form.errors.return_location" class="mt-2 text-sm text-red-600">
+                                                {{ form.errors.return_location }}
+                                            </p>
                                         </div>
                                     </div>
                                 </div>
+
+                                <div class="rounded-xl border border-slate-200 bg-[#F4F6FA] p-4">
+                                    <p class="text-sm leading-6 text-slate-600">
+                                        Review your dates and locations before confirming your reservation. Your booking will be submitted to the server for validation.
+                                    </p>
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    :disabled="!canSubmit || form.processing"
+                                    class="flex w-full items-center justify-center gap-2 rounded-xl bg-[#101D35] px-6 py-4 font-bold text-white transition hover:bg-[#263F60] focus:outline-none focus:ring-2 focus:ring-[#58779D] focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
+                                >
+                                    <svg v-if="form.processing" class="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                    </svg>
+
+                                    <span>
+                                        {{ form.processing ? 'Processing booking...' : (!page.props.auth?.user ? 'Log in to continue' : 'Confirm booking') }}
+                                    </span>
+
+                                    <svg v-if="!form.processing" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14m-7-7 7 7-7 7" />
+                                    </svg>
+                                </button>
                             </form>
-                        </div>
+                        </section>
                     </div>
 
-                    <!--  Price Summary Sidebar -->
-                    <div class="lg:col-span-1">
-                        <div
-                            class="sticky top-4 rounded-2xl border border-gray-100 bg-white p-8 shadow-lg"
-                        >
-                            <div class="mb-6 flex items-center space-x-3">
-                                <div
-                                    class="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-r from-orange-500 to-orange-600"
-                                >
-                                    <svg
-                                        class="h-5 w-5 text-white"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            stroke-width="2"
-                                            d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"
-                                        ></path>
-                                    </svg>
-                                </div>
-                                <h3 class="text-2xl font-bold text-gray-900">
-                                    Booking Summary
-                                </h3>
+                    <!-- Price summary -->
+                    <aside class="lg:sticky lg:top-6">
+                        <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                            <div class="bg-[#101D35] p-6 text-white">
+                                <p class="text-sm font-medium text-slate-300">
+                                    Your reservation
+                                </p>
+                                <h2 class="mt-1 text-2xl font-bold">
+                                    Price summary
+                                </h2>
+                                <p class="mt-2 text-sm text-slate-300">
+                                    {{ car.make }} {{ car.model }}
+                                </p>
                             </div>
 
-                            <div class="mb-8 space-y-6">
-                                <div
-                                    class="space-y-4 rounded-xl bg-gray-50 p-4"
-                                >
-                                    <div
-                                        class="flex items-center justify-between"
-                                    >
-                                        <span class="font-medium text-gray-600"
-                                            >Rental Period</span
-                                        >
-                                        <span class="font-bold text-gray-900">
-                                            {{
-                                                rentalDays > 0
-                                                    ? `${rentalDays} day${rentalDays > 1 ? 's' : ''}`
-                                                    : '-'
-                                            }}
+                            <div class="space-y-5 p-6">
+                                <div class="rounded-xl bg-[#F4F6FA] p-4">
+                                    <div class="flex items-center justify-between gap-3">
+                                        <span class="text-sm text-slate-600">Rental duration</span>
+                                        <span class="font-bold text-[#101D35]">
+                                            {{ rentalDays > 0 ? `${rentalDays} day${rentalDays === 1 ? '' : 's'}` : '—' }}
                                         </span>
                                     </div>
 
-                                    <div
-                                        class="flex items-center justify-between"
-                                    >
-                                        <span class="font-medium text-gray-600"
-                                            >Daily Rate</span
-                                        >
-                                        <span class="font-bold text-gray-900"
-                                            >${{ car.price_per_day }}</span
-                                        >
+                                    <div class="mt-4 flex items-center justify-between gap-3">
+                                        <span class="text-sm text-slate-600">Daily rate</span>
+                                        <span class="font-semibold text-[#101D35]">
+                                            {{ formatPrice(dailyRate) }}
+                                        </span>
                                     </div>
                                 </div>
 
-                                <div class="space-y-4">
-                                    <div
-                                        class="flex items-center justify-between py-2"
-                                    >
-                                        <span class="font-medium text-gray-600"
-                                            >Subtotal</span
-                                        >
-                                        <span
-                                            class="text-lg font-bold text-gray-900"
-                                        >
-                                            ${{
-                                                rentalDays > 0
-                                                    ? subtotal.toFixed(2)
-                                                    : '0.00'
-                                            }}
-                                        </span>
-                                    </div>
+                                <div class="flex items-center justify-between gap-3">
+                                    <span class="text-sm text-slate-600">Subtotal</span>
+                                    <span class="font-semibold text-[#101D35]">
+                                        {{ formatPrice(subtotal) }}
+                                    </span>
+                                </div>
 
-                                    <div
-                                        class="flex items-center justify-between py-2"
-                                    >
-                                        <span class="font-medium text-gray-600"
-                                            >Tax (7%)</span
-                                        >
-                                        <span
-                                            class="text-lg font-bold text-gray-900"
-                                        >
-                                            ${{
-                                                rentalDays > 0
-                                                    ? tax.toFixed(2)
-                                                    : '0.00'
-                                            }}
-                                        </span>
-                                    </div>
+                                <div class="flex items-center justify-between gap-3">
+                                    <span class="text-sm text-slate-600">Tax (7%)</span>
+                                    <span class="font-semibold text-[#101D35]">
+                                        {{ formatPrice(tax) }}
+                                    </span>
+                                </div>
 
-                                    <div
-                                        class="border-t-2 border-gray-200 pt-4"
-                                    >
-                                        <div
-                                            class="flex items-center justify-between"
-                                        >
-                                            <span
-                                                class="text-xl font-bold text-gray-900"
-                                                >Total</span
-                                            >
-                                            <span
-                                                class="text-2xl font-bold text-orange-500"
-                                            >
-                                                ${{
-                                                    rentalDays > 0
-                                                        ? total.toFixed(2)
-                                                        : '0.00'
-                                                }}
-                                            </span>
+                                <div class="border-t border-dashed border-slate-300 pt-5">
+                                    <div class="flex items-start justify-between gap-3">
+                                        <div>
+                                            <p class="text-base font-bold text-[#101D35]">
+                                                Estimated total
+                                            </p>
+                                            <p class="mt-1 text-xs text-slate-500">
+                                                For the selected rental period
+                                            </p>
+                                        </div>
+
+                                        <p class="text-2xl font-bold text-[#101D35]">
+                                            {{ formatPrice(total) }}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div class="rounded-xl border border-slate-200 p-4">
+                                    <div class="flex items-start gap-3">
+                                        <svg class="mt-0.5 h-5 w-5 shrink-0 text-[#58779D]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 3a11.955 11.955 0 01-8.618 2.984A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622C17.176 19.29 21 14.591 21 9c0-1.042-.133-2.053-.382-3.016z" />
+                                        </svg>
+
+                                        <div>
+                                            <p class="text-sm font-semibold text-[#101D35]">
+                                                Reservation details
+                                            </p>
+                                            <p class="mt-1 text-xs leading-5 text-slate-500">
+                                                Final booking acceptance and availability depend on server-side validation.
+                                            </p>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <!--  Book Now Button -->
-                            <button
-                                @click="submitBooking"
-                                :disabled="!canSubmit || form.processing"
-                                :class="{
-                                    'transform cursor-pointer bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg hover:scale-[1.01] hover:from-orange-600 hover:to-orange-700 hover:shadow-xl':
-                                        canSubmit && !form.processing,
-                                    'cursor-not-allowed bg-gray-300 text-gray-500':
-                                        !canSubmit || form.processing,
-                                }"
-                                class="w-full rounded-xl px-6 py-5 text-lg font-bold transition-all duration-300"
-                            >
-                                <span
-                                    v-if="form.processing"
-                                    class="flex items-center justify-center"
-                                >
-                                    <svg
-                                        class="mr-3 -ml-1 h-6 w-6 animate-spin text-white"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <circle
-                                            class="opacity-25"
-                                            cx="12"
-                                            cy="12"
-                                            r="10"
-                                            stroke="currentColor"
-                                            stroke-width="4"
-                                        ></circle>
-                                        <path
-                                            class="opacity-75"
-                                            fill="currentColor"
-                                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                                        ></path>
-                                    </svg>
-                                    Processing...
-                                </span>
-                                <span
-                                    v-else-if="!$page.props.auth.user"
-                                    class="flex items-center justify-center"
-                                >
-                                    <svg
-                                        class="mr-2 h-5 w-5"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            stroke-width="2"
-                                            d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"
-                                        ></path>
-                                    </svg>
-                                    Login to Book
-                                </span>
-                                <span
-                                    v-else
-                                    class="flex items-center justify-center"
-                                >
-                                    <svg
-                                        class="mr-2 h-5 w-5 fill-white"
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        viewBox="0 0 640 640"
-                                    >
-                                        <path
-                                            d="M416 64C433.7 64 448 78.3 448 96L448 128L480 128C515.3 128 544 156.7 544 192L544 480C544 515.3 515.3 544 480 544L160 544C124.7 544 96 515.3 96 480L96 192C96 156.7 124.7 128 160 128L192 128L192 96C192 78.3 206.3 64 224 64C241.7 64 256 78.3 256 96L256 128L384 128L384 96C384 78.3 398.3 64 416 64zM438 225.7C427.3 217.9 412.3 220.3 404.5 231L285.1 395.2L233 343.1C223.6 333.7 208.4 333.7 199.1 343.1C189.8 352.5 189.7 367.7 199.1 377L271.1 449C276.1 454 283 456.5 289.9 456C296.8 455.5 303.3 451.9 307.4 446.2L443.3 259.2C451.1 248.5 448.7 233.5 438 225.7z"
-                                        />
-                                    </svg>
-                                    Book Now
-                                </span>
-                            </button>
-                        </div>
-                    </div>
+                                <a href="/fleet" class="block text-center text-sm font-semibold text-[#58779D] transition hover:text-[#101D35]">
+                                    ← Back to fleet
+                                </a>
+                            </div>
+                        </section>
+                    </aside>
                 </div>
             </div>
         </div>
